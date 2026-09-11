@@ -35,8 +35,9 @@ def create_app(config_class=Config):
     with app.app_context():
         from . import models  # noqa: F401  (register models before create_all)
 
-        db.create_all()
-        _seed_admin()
+        # db.create_all() is removed to prevent connection overhead in serverless
+        # Run this once locally or via a migration script
+        # _seed_admin()
 
     @app.route("/")
     def index():
