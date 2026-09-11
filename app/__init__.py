@@ -3,7 +3,7 @@ import os
 from flask import Flask, jsonify, render_template, current_app
 
 from .config import Config
-from .extensions import cors, db, init_celery, jwt
+from .extensions import cors, db, jwt
 
 
 def _seed_admin():
@@ -37,10 +37,6 @@ def create_app(config_class=Config):
 
         db.create_all()
         _seed_admin()
-
-#    init_celery(app)
-#
-#    from . import tasks  # noqa: F401  (import after init_celery so FlaskTask is set)
 
     @app.route("/")
     def index():

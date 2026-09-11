@@ -33,8 +33,6 @@ Amardeep Readymade is a sophisticated, professional-grade management application
 | **Backend** | `Flask (Python)` | Robust API and business logic layer. |
 | **Database** | `Supabase (PostgreSQL)` | Scalable, cloud-native relational storage. |
 | **ORM** | `SQLAlchemy` | Efficient database mapping and queries. |
-| **Task Queue** | `Celery` | Background processing and automated reports. |
-| **Broker** | `Redis` | High-speed messaging for Celery tasks. |
 | **Styling** | `Custom CSS3` | High-end "Classic Ledger" design system. |
 
 ---
@@ -43,7 +41,6 @@ Amardeep Readymade is a sophisticated, professional-grade management application
 
 ### Prerequisites
 *   Python 3.10+
-*   Redis Server (local or cloud via Upstash)
 *   Supabase Account
 
 ### Installation
@@ -64,7 +61,6 @@ Amardeep Readymade is a sophisticated, professional-grade management application
    SECRET_KEY=your_random_secret_key
    JWT_SECRET_KEY=your_jwt_secret_key
    SUPABASE_DB_URL=postgresql://postgres:[password]@db.[id].supabase.co:5432/postgres
-   REDIS_URL=redis://localhost:6379/0
    ADMIN_PASSWORD=manish123
    ```
 
@@ -73,10 +69,6 @@ Amardeep Readymade is a sophisticated, professional-grade management application
    python app.py
    ```
 
-5. **Start the Worker (In a separate terminal)**
-   ```bash
-   celery -A celery_worker.celery worker --beat --loglevel=info
-   ```
 
 ---
 
