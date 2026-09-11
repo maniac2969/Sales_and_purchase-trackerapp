@@ -70,7 +70,7 @@ Amardeep Readymade is a sophisticated, professional-grade management application
 
 4. **Run the Application**
    ```bash
-   python run.py
+   python app.py
    ```
 
 5. **Start the Worker (In a separate terminal)**
