@@ -1,0 +1,103 @@
+# 🏛️ Amardeep Readymade
+**A Premium Retail Ledger & Management System**
+
+Amardeep Readymade is a sophisticated, professional-grade management application designed for retail businesses to track sales, manage wholesaler accounts, and coordinate staff activities. Built with a "Classic Ledger" aesthetic, it combines modern cloud technology with a timeless business approach.
+
+---
+
+## ✨ Key Features
+
+### 👑 Administrative Control
+*   **Financial Oversight**: Real-time dashboards showing today's sales, monthly totals, and overall business health.
+*   **Wholesaler Khata Management**:
+    *   **Debt Khata**: Track exactly what the shop owes to suppliers.
+    *   **Uchanti Khata**: Manage advances given to wholesalers.
+    *   **Transaction History**: Full audit trail of every balance change.
+*   **Staff Orchestration**: Add, remove, or disable staff accounts.
+*   **Approval Workflow**: A dedicated queue to review, approve, or reject sales and purchases entered by staff.
+*   **Automated Reporting**: Scheduled daily and monthly sales summaries delivered via notifications.
+
+### 👔 Staff Capabilities
+*   **Sales Entry**: Quickly record new sales with item details and pricing.
+*   **Purchase Recording**: Log incoming stock and mark items as "on credit" to update wholesaler debts.
+*   **Account Transparency**: View current sales and purchase records.
+*   **Pending Queue**: Track which entries are awaiting administrative approval.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Frontend** | `Vue.js 3` | Reactive, high-performance user interface. |
+| **Backend** | `Flask (Python)` | Robust API and business logic layer. |
+| **Database** | `Supabase (PostgreSQL)` | Scalable, cloud-native relational storage. |
+| **ORM** | `SQLAlchemy` | Efficient database mapping and queries. |
+| **Task Queue** | `Celery` | Background processing and automated reports. |
+| **Broker** | `Redis` | High-speed messaging for Celery tasks. |
+| **Styling** | `Custom CSS3` | High-end "Classic Ledger" design system. |
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+*   Python 3.10+
+*   Redis Server (local or cloud via Upstash)
+*   Supabase Account
+
+### Installation
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/amardeep-readymade.git
+   cd amardeep-readymade
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Environment Configuration**
+   Create a `.env` file in the root directory:
+   ```env
+   SECRET_KEY=your_random_secret_key
+   JWT_SECRET_KEY=your_jwt_secret_key
+   SUPABASE_DB_URL=postgresql://postgres:[password]@db.[id].supabase.co:5432/postgres
+   REDIS_URL=redis://localhost:6379/0
+   ADMIN_PASSWORD=manish123
+   ```
+
+4. **Run the Application**
+   ```bash
+   python run.py
+   ```
+
+5. **Start the Worker (In a separate terminal)**
+   ```bash
+   celery -A celery_worker.celery worker --beat --loglevel=info
+   ```
+
+---
+
+## 🔐 Access & Security
+
+### Default Administrator
+Upon the first launch, the system seeds a default admin account:
+*   **Username**: `amardeep`
+*   **Password**: `manish123`
+
+### RBAC Model
+The system employs **Role-Based Access Control (RBAC)**:
+*   **Admin**: Full access to all financial data, staff management, and the approval system.
+*   **Staff**: Access to data entry and viewing. Entries created by staff remain in a `pending` state and do not affect totals until an Admin approves them.
+
+---
+
+## 📈 Architecture Flow
+`Staff Entry` $\rightarrow$ `Pending Status` $\rightarrow$ `Admin Review` $\rightarrow$ `Approved` $\rightarrow$ `Financials Updated`
+
+---
+
+## 📜 License
+This project is proprietary and developed for **Amardeep Readymade**.

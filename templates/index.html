@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amardeep Readymade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,450;9..144,550;9..144,650&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://unpkg.com/vue@3.4.31/dist/vue.global.prod.js"></script>
+</head>
+<body>
+{% raw %}
+<div id="app" v-cloak>
+
+  <!-- ============ LOGIN VIEW ============ -->
+  <div v-if="!user" class="login-wrap">
+    <div class="login-brand">
+      <div>
+        <span class="brand-mark">AR</span>
+        <div class="wordmark">
+          <p class="l1">Amardeep</p>
+          <p class="l2">Readymade</p>
+        </div>
+        <div class="login-stitch"></div>
+        <p class="login-tagline">Sales, purchases and khata, all kept in one place. Sign in to open the day's ledger.</p>
+      </div>
+      <p class="login-foot">Retail management · staff access only</p>
+    </div>
+    <div class="login-panel">
+      <div class="login-card">
+        <h2>Sign in</h2>
+        <p class="sub">Enter your credentials to continue.</p>
+        <form @submit.prevent="login">
+          <div class="field">
+            <label>Username</label>
+            <input v-model.trim="loginForm.username" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label>Password</label>
+            <input type="password" v-model="loginForm.password" autocomplete="current-password" required>
+          </div>
+          <p v-if="error" class="error" style="color:var(--rust); font-size:0.85rem; margin-top:10px;">{{ error }}</p>
+          <button type="submit" class="btn btn-primary btn-block" :disabled="loading">
+            {{ loading ? "Signing in..." : "Sign in" }}
+          </button>
+        </form>
+        <p class="login-help">Forgot your password? Ask the administrator to reset it from Staff.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MAIN APP LAYOUT ============ -->
+  <div v-else class="layout">
+    <aside class="sidebar" :class="{ open: sidebarOpen }">
+      <div class="sidebar-brand">
+        <span class="brand-mark">AR</span>
+        <div class="names">
+          <div class="l1">Amardeep</div>
+          <div class="l2">Readymade</div>
+        </div>
+      </div>
+
+      <ul class="nav">
+        <li v-for="item in navItems" :key="item.key">
+          <a :class="{ active: view === item.key }" @click="go(item.key)">
+            <span v-html="item.icon"></span> {{ item.label }}
+            <span v-if="item.key === 'approvals' && pendingCount > 0" class="badge-count">{{ pendingCount }}</span>
+            <span v-else-if="item.key === 'notifications' && unreadCount > 0" class="badge-count">{{ unreadCount }}</span>
+          </a>
+        </li>
+      </ul>
+
+      <div class="sidebar-user">
+        <div class="row">
+          <span class="avatar">{{ user.name.charAt(0) }}</span>
+          <div class="who">
+            <div class="name">{{ user.name }}</div>
+            <div class="role">{{ user.role }}</div>
+          </div>
+        </div>
+        <button class="logout-btn" @click="logout">
+          <svg viewBox="0 0 20 20"><path d="M8.4 3H4.4v14h4"/><path d="M17 10H8.6m8.4 0-3-3m3 3-3 3"/></svg>
+          Log out
+        </button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="topbar">
+        <div style="display:flex; align-items:center; gap:14px;">
+          <button class="menu-toggle" @click="sidebarOpen = !sidebarOpen" aria-label="Open menu">
+            <svg viewBox="0 0 20 20"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
+          </button>
+          <div class="titles">
+            <h1>{{ currentViewTitle }}</h1>
+            <p class="sub">{{ currentViewSubtitle }}</p>
+          </div>
+        </div>
+        <span class="date-pill">{{ formattedDate }}</span>
+      </div>
+
+      <div class="content">
+        <!-- Toast Notification -->
+        <transition name="fade">
+          <div v-if="toast" id="toast" :class="['toast', toastType]" @click="toast = ''" style="opacity:1; pointer-events:auto; transform:translate(-50%,0)">
+            {{ toast }}
+          </div>
+        </transition>
+
+        <!-- ============ DASHBOARD ============ -->
+        <section v-if="view === 'dashboard'" class="view-section visible">
+          <div class="grid-stats">
+            <div class="stat-tile">
+              <div class="label">Today's sale</div>
+              <div class="value tabular">{{ fmt(dash.todayAmount) }}</div>
+              <div class="foot">{{ dash.todayCount }} entries &middot; {{ dash.todayPieces }} pcs</div>
+            </div>
+            <div class="stat-tile">
+              <div class="label">This month</div>
+              <div class="value tabular">{{ fmt(dash.monthAmount) }}</div>
+              <div class="foot">{{ dash.monthCount }} entries</div>
+            </div>
+            <div class="stat-tile">
+              <div class="label">Total debt khata</div>
+              <div class="value tabular" style="color:var(--rust)">{{ fmt(dash.totalDebt) }}</div>
+              <div class="foot">shop owes wholesalers</div>
+            </div>
+            <div class="stat-tile">
+              <div class="label">Total uchanti</div>
+              <div class="value tabular">{{ fmt(dash.totalUchanti) }}</div>
+              <div class="foot">advances given</div>
+            </div>
+            <div v-if="isAdmin" class="stat-tile">
+              <div class="label">Pending approvals</div>
+              <div class="value tabular" style="color:var(--amber)">{{ pendingCount }}</div>
+              <div class="foot"><a href="#" @click.prevent="go('approvals')">Review now &rarr;</a></div>
+            </div>
+          </div>
+
+          <div class="grid-2" style="margin-top:28px;">
+            <div class="card">
+              <h2 style="font-size:1.02rem; margin-bottom:14px;">Recent sales</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Item</th><th>Date</th><th class="num">Price</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr v-for="s in dash.recentSales" :key="s.id">
+                      <td class="item-name">{{ s.item }} <span class="muted">x{{ s.piece }}</span></td>
+                      <td class="muted">{{ s.sale_date }}</td>
+                      <td class="num tabular">{{ fmt(s.total_price) }}</td>
+                      <td><span class="badge" :class="s.status === 'approved' ? 'badge-approved' : (s.status === 'pending' ? 'badge-pending' : 'badge-declined')"><span class="badge-dot"></span>{{ s.status }}</span></td>
+                    </tr>
+                    <tr v-if="!dash.recentSales.length"><td colspan="4" class="empty-row">No sales yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div class="card">
+              <h2 style="font-size:1.02rem; margin-bottom:14px;">Recent purchases</h2>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>Item</th><th>Wholesaler</th><th class="num">Price</th><th>Status</th></tr></thead>
+                  <tbody>
+                    <tr v-for="p in dash.recentPurchases" :key="p.id">
+                      <td class="item-name">{{ p.item }} <span class="muted">x{{ p.piece }}</span></td>
+                      <td class="muted">{{ p.wholesaler_name }}</td>
+                      <td class="num tabular">{{ fmt(p.total_price) }}</td>
+                      <td><span class="badge" :class="p.status === 'approved' ? 'badge-approved' : (p.status === 'pending' ? 'badge-pending' : 'badge-declined')"><span class="badge-dot"></span>{{ p.status }}</span></td>
+                    </tr>
+                    <tr v-if="!dash.recentPurchases.length"><td colspan="4" class="empty-row">No purchases yet.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ SALES ============ -->
+        <section v-if="view === 'sales'" class="view-section visible">
+          <div class="toolbar">
+            <div class="seg">
+              <button :class="{ active: salesMode === 'daily' }" @click="salesMode = 'daily'; loadDailySales()">Daily sale</button>
+              <button :class="{ active: salesMode === 'monthly' }" @click="salesMode = 'monthly'; loadMonthlySales()">Monthly sale</button>
+            </div>
+            <div class="field small" style="margin-top:0;">
+              <label>Search day</label>
+              <input type="date" v-model="salesDate">
+            </div>
+            <button class="btn btn-ghost" @click="loadDailySales">Search</button>
+          </div>
+
+          <div class="card" v-if="salesMode === 'daily'">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Item</th><th class="num">Pcs</th><th class="num">Total Price</th><th>Status</th><th>Added by</th><th>Notes</th><th v-if="isAdmin">Action</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in salesList" :key="s.id">
+                    <td>{{ s.id }}</td>
+                    <td class="item-name">{{ s.item }}</td>
+                    <td class="num tabular">{{ s.piece }}</td>
+                    <td class="num tabular">{{ fmt(s.total_price) }}</td>
+                    <td><span class="badge" :class="s.status === 'approved' ? 'badge-approved' : (s.status === 'pending' ? 'badge-pending' : 'badge-declined')"><span class="badge-dot"></span>{{ s.status }}</span></td>
+                    <td class="muted">{{ s.created_by_name }}</td>
+                    <td class="muted">{{ s.notes || "—" }}</td>
+                    <td v-if="isAdmin">
+                      <div class="row-actions" v-if="s.status === 'pending'">
+                        <button class="btn btn-approve btn-sm" @click="approveSale(s.id)">Approve</button>
+                        <button class="btn btn-decline btn-sm" @click="rejectSale(s.id)">Reject</button>
+                      </div>
+                      <span v-else class="muted">—</span>
+                    </td>
+                  </tr>
+                  <tr v-if="!salesList.length"><td :colspan="isAdmin ? 8 : 7" class="empty-row">No sales found for {{ salesDate }}.</td></tr>
+                </tbody>
+                <tfoot v-if="salesList.length">
+                  <tr>
+                    <th colspan="3" style="text-align:right">Total (approved only)</th>
+                    <th class="num tabular">{{ fmt(salesTotals.amount) }}</th>
+                    <th></th><th></th><th class="num tabular">{{ salesTotals.pieces }} pcs</th><th v-if="isAdmin"></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div class="card" v-if="salesMode === 'monthly'">
+            <div class="toolbar">
+              <div class="field small" style="margin-top:0;">
+                <label>Search month</label>
+                <input type="month" v-model="salesMonth">
+              </div>
+              <button class="btn btn-ghost" @click="loadMonthlySales">Search</button>
+            </div>
+            <div class="grid-stats" style="margin-bottom:20px;">
+              <div class="stat-tile">
+                <div class="label">Total Sale</div>
+                <div class="value tabular">{{ fmt(monthly.totals.amount) }}</div>
+              </div>
+              <div class="stat-tile">
+                <div class="label">Total Pieces</div>
+                <div class="value tabular">{{ monthly.totals.pieces }}</div>
+              </div>
+              <div class="stat-tile">
+                <div class="label">Entries</div>
+                <div class="value tabular">{{ monthly.totals.count }}</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Item</th><th class="num">Pieces</th><th class="num">Total</th><th class="num">Entries</th></tr></thead>
+                <tbody>
+                  <tr v-for="i in monthly.by_item" :key="i.item">
+                    <td class="item-name">{{ i.item }}</td>
+                    <td class="num tabular">{{ i.pieces }}</td>
+                    <td class="num tabular">{{ fmt(i.amount) }}</td>
+                    <td class="num tabular">{{ i.count }}</td>
+                  </tr>
+                  <tr v-if="!monthly.by_item.length"><td colspan="4" class="empty-row">No sales in {{ salesMonth }}.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="note">Monthly figures include approved sales only.</p>
+          </div>
+
+          <div class="section-heading"><h2>New sale</h2><div class="dashline"></div></div>
+          <div class="card">
+            <form class="inline-form" @submit.prevent="addSale">
+              <div class="field grow"><label>Item name</label><input v-model.trim="saleForm.item" placeholder="e.g. Cotton Kurta (M)" required></div>
+              <div class="field small"><label>Pieces</label><input type="number" min="1" step="1" v-model.number="saleForm.piece" placeholder="1" required></div>
+              <div class="field small"><label>Price</label><input type="number" min="0" step="0.01" v-model="saleForm.total_price" placeholder="0.00" required></div>
+              <div class="field small"><label>Date</label><input type="date" v-model="saleForm.sale_date"></div>
+              <div class="field grow"><label>Notes (optional)</label><input v-model.trim="saleForm.notes" placeholder="Optional"></div>
+              <button type="submit" class="btn btn-brass" style="height:38px;" :disabled="loading">Add sale</button>
+            </form>
+            <p v-if="!isAdmin" class="note">Sales you add go to the admin for approval before they count.</p>
+          </div>
+        </section>
+
+        <!-- ============ PURCHASES ============ -->
+        <section v-if="view === 'purchases'" class="view-section visible">
+          <div class="toolbar">
+            <div class="field small" style="margin-top:0;">
+              <label>Search day</label>
+              <input type="date" v-model="purchaseDate">
+            </div>
+            <button class="btn btn-ghost" @click="loadPurchases">Search</button>
+          </div>
+
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>#</th><th>Wholesaler</th><th>Item</th><th class="num">Pcs</th><th class="num">Total</th><th>Credit</th><th>Status</th><th>Added by</th><th v-if="isAdmin">Action</th></tr></thead>
+                <tbody>
+                  <tr v-for="p in purchases" :key="p.id">
+                    <td>{{ p.id }}</td>
+                    <td class="item-name">{{ p.wholesaler_name }}</td>
+                    <td>{{ p.item }}</td>
+                    <td class="num tabular">{{ p.piece }}</td>
+                    <td class="num tabular">{{ fmt(p.total_price) }}</td>
+                    <td><span class="badge" :class="p.on_credit ? 'badge-pending' : 'badge-staff'">{{ p.on_credit ? 'Yes' : 'No' }}</span></td>
+                    <td><span class="badge" :class="p.status === 'approved' ? 'badge-approved' : (p.status === 'pending' ? 'badge-pending' : 'badge-declined')"><span class="badge-dot"></span>{{ p.status }}</span></td>
+                    <td class="muted">{{ p.created_by_name }}</td>
+                    <td v-if="isAdmin">
+                      <div class="row-actions" v-if="p.status === 'pending'">
+                        <button class="btn btn-approve btn-sm" @click="approvePurchase(p.id)">Approve</button>
+                        <button class="btn btn-decline btn-sm" @click="rejectPurchase(p.id)">Reject</button>
+                      </div>
+                      <span v-else class="muted">—</span>
+                    </td>
+                  </tr>
+                  <tr v-if="!purchases.length"><td :colspan="isAdmin ? 9 : 8" class="empty-row">No purchases found for {{ purchaseDate }}.</td></tr>
+                </tbody>
+                <tfoot v-if="purchases.length">
+                  <tr>
+                    <th colspan="4" style="text-align:right">Total (approved only)</th>
+                    <th class="num tabular">{{ fmt(purchaseTotals.amount) }}</th>
+                    <th></th><th></th><th class="num tabular">{{ purchaseTotals.pieces }} pcs</th><th v-if="isAdmin"></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-heading"><h2>New purchase</h2><div class="dashline"></div></div>
+          <div class="card">
+            <form class="inline-form" @submit.prevent="addPurchase">
+              <div class="field"><label>Wholesaler</label>
+                <select v-model="purchaseForm.wholesaler_id" required>
+                  <option value="" disabled>Select wholesaler</option>
+                  <option v-for="w in wholesalers" :key="w.id" :value="w.id">{{ w.name }}</option>
+                </select>
+              </div>
+              <div class="field grow"><label>Item name</label><input v-model.trim="purchaseForm.item" placeholder="e.g. Cotton fabric bulk" required></div>
+              <div class="field small"><label>Pieces</label><input type="number" min="1" step="1" v-model.number="purchaseForm.piece" placeholder="1" required></div>
+              <div class="field small"><label>Price</label><input type="number" min="0" step="0.01" v-model="purchaseForm.total_price" placeholder="0.00" required></div>
+              <div class="field small"><label>Date</label><input type="date" v-model="purchaseForm.purchase_date"></div>
+              <label class="checkline"><input type="checkbox" v-model="purchaseForm.on_credit"> On credit</label>
+              <div class="field grow"><label>Notes (optional)</label><input v-model.trim="purchaseForm.notes" placeholder="Optional"></div>
+              <button type="submit" class="btn btn-brass" style="height:38px;" :disabled="loading">Add purchase</button>
+            </form>
+            <p v-if="!wholesalers.length" class="note">Add a wholesaler first from the Wholesalers section.</p>
+            <p v-else-if="!isAdmin" class="note">Purchases you add go to the admin for approval.</p>
+          </div>
+        </section>
+
+        <!-- ============ WHOLESALERS ============ -->
+        <section v-if="view === 'wholesalers'" class="view-section visible">
+          <div class="card">
+            <h2 style="font-size:1.02rem; margin-bottom:14px;">All wholesalers</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Phone</th><th class="num">Debt khata</th><th class="num">Uchanti khata</th><th v-if="isAdmin">Actions</th></tr></thead>
+                <tbody>
+                  <tr v-for="w in wholesalers" :key="w.id" :class="{ selected: selectedWholesaler && selectedWholesaler.id === w.id }">
+                    <td class="item-name"><a href="#" @click.prevent="selectWholesaler(w)" class="link">{{ w.name }}</a></td>
+                    <td class="muted">{{ w.phone || "—" }}</td>
+                    <td class="num tabular" style="color:var(--rust)">{{ fmt(w.debt_khata) }}</td>
+                    <td class="num tabular">{{ fmt(w.uchanti_khata) }}</td>
+                    <td v-if="isAdmin" class="row-actions">
+                      <button class="btn btn-ghost btn-sm" @click="selectWholesaler(w)">Khata</button>
+                      <button class="btn btn-decline btn-sm" @click="deleteWholesaler(w)">Delete</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!wholesalers.length"><td colspan="5" class="empty-row">No wholesalers yet.</td></tr>
+                </tbody>
+                <tfoot v-if="wholesalers.length">
+                  <tr>
+                    <th colspan="2" style="text-align:right">Totals:</th>
+                    <th class="num tabular" style="color:var(--rust)">{{ fmt(wholesalerTotals.debt) }}</th>
+                    <th class="num tabular">{{ fmt(wholesalerTotals.uchanti) }}</th>
+                    <th v-if="isAdmin"></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+
+          <div v-if="isAdmin" class="section-heading"><h2>Add wholesaler</h2><div class="dashline"></div></div>
+          <div v-if="isAdmin" class="card">
+            <form class="inline-form" @submit.prevent="addWholesaler">
+              <div class="field grow"><label>Wholesaler name</label><input v-model.trim="wholesalerForm.name" placeholder="e.g. Om Traders" required></div>
+              <div class="field"><label>Phone</label><input v-model.trim="wholesalerForm.phone" placeholder="10-digit number"></div>
+              <div class="field grow"><label>Address</label><input v-model.trim="wholesalerForm.address" placeholder="Optional"></div>
+              <button type="submit" class="btn btn-brass" style="height:38px;" :disabled="loading">Add</button>
+            </form>
+          </div>
+
+          <div v-if="selectedWholesaler" class="card" style="margin-top:20px;">
+            <div class="toolbar" style="justify-content:space-between; align-items:center;">
+              <h3>{{ selectedWholesaler.name }} — Khata</h3>
+              <button class="btn btn-ghost btn-sm" @click="selectedWholesaler = null">Close</button>
+            </div>
+            <div class="grid-stats" style="margin-bottom:20px;">
+              <div class="stat-tile">
+                <div class="label">Debt Khata (shop owes)</div>
+                <div class="value tabular" style="color:var(--rust)">{{ fmt(selectedWholesaler.debt_khata) }}</div>
+              </div>
+              <div class="stat-tile">
+                <div class="label">Uchanti Khata (advance given)</div>
+                <div class="value tabular">{{ fmt(selectedWholesaler.uchanti_khata) }}</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div v-if="isAdmin">
+                <h4 style="font-size:0.9rem; margin-bottom:12px;">Update Khata</h4>
+                <form class="card" style="padding:16px;" @submit.prevent="updateKhata">
+                  <div class="field" style="margin-top:0">
+                    <label>Khata Type</label>
+                    <select v-model="khataForm.khata_type">
+                      <option value="debt">Debt Khata</option>
+                      <option value="uchanti">Uchanti Khata</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Entry Type</label>
+                    <select v-model="khataForm.entry_type">
+                      <option value="add">Add</option>
+                      <option value="deduct">Deduct / Payment</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Amount</label>
+                    <input type="number" min="0" step="0.01" v-model="khataForm.amount" placeholder="0.00" required>
+                  </div>
+                  <div class="field">
+                    <label>Note</label>
+                    <input v-model.trim="khataForm.note" placeholder="Optional">
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-block" :disabled="loading">Update Balance</button>
+                </form>
+              </div>
+              <div>
+                <h4 style="font-size:0.9rem; margin-bottom:12px;">History</h4>
+                <div class="table-wrap">
+                  <table>
+                    <thead><tr><th>Date</th><th>Khata</th><th>Type</th><th class="num">Amount</th><th class="num">Balance</th><th>Note</th></tr></thead>
+                    <tbody>
+                      <tr v-for="t in khataHistory" :key="t.id">
+                        <td class="muted">{{ (t.created_at || "").slice(0, 16).replace("T", " ") }}</td>
+                        <td>{{ t.khata_type }}</td>
+                        <td><span class="badge" :class="t.entry_type === 'add' ? 'badge-pending' : 'badge-approved'">{{ t.entry_type }}</span></td>
+                        <td class="num tabular">{{ fmt(t.amount) }}</td>
+                        <td class="num tabular">{{ fmt(t.balance_after) }}</td>
+                        <td class="muted">{{ t.note || "—" }}</td>
+                      </tr>
+                      <tr v-if="!khataHistory.length"><td colspan="6" class="empty-row">No khata entries yet.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ APPROVALS ============ -->
+        <section v-if="view === 'approvals'" class="view-section visible">
+          <div class="section-heading" style="margin-top:0;">
+            <h2>Sales <span class="badge badge-pending" style="margin-left:8px; font-size:0.7rem;">{{ pendingSales.length }} pending</span ></h2>
+            <div class="dashline"></div>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Item</th><th class="num">Pcs</th><th class="num">Price</th><th>Date</th><th>Added by</th><th>When</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr v-for="s in pendingSales" :key="s.id">
+                    <td class="item-name">{{ s.item }}</td>
+                    <td class="num tabular">{{ s.piece }}</td>
+                    <td class="num tabular">{{ fmt(s.total_price) }}</td>
+                    <td class="muted">{{ s.sale_date }}</td>
+                    <td class="muted">{{ s.created_by_name }}</td>
+                    <td class="muted">{{ (s.created_at || "").slice(0, 16).replace("T", " ") }}</td>
+                    <td class="row-actions">
+                      <button class="btn btn-approve btn-sm" @click="approveSale(s.id)">Approve</button>
+                      <button class="btn btn-decline btn-sm" @click="rejectSale(s.id)">Reject</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!pendingSales.length"><td colspan="7" class="empty-row">No pending sales.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-heading">
+            <h2>Purchases <span class="badge badge-pending" style="margin-left:8px; font-size:0.7rem;">{{ pendingPurchases.length }} pending</span ></h2>
+            <div class="dashline"></div>
+          </div>
+          <div class="card">
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Wholesaler</th><th>Item</th><th class="num">Pcs</th><th class="num">Price</th><th>Credit</th><th>Added by</th><th>When</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr v-for="p in pendingPurchases" :key="p.id">
+                    <td class="item-name">{{ p.wholesaler_name }}</td>
+                    <td>{{ p.item }}</td>
+                    <td class="num tabular">{{ p.piece }}</td>
+                    <td class="num tabular">{{ fmt(p.total_price) }}</td>
+                    <td><span class="badge" :class="p.on_credit ? 'badge-pending' : 'badge-staff'">{{ p.on_credit ? 'Yes' : 'No' }}</span></td>
+                    <td class="muted">{{ p.created_by_name }}</td>
+                    <td class="muted">{{ (p.created_at || "").slice(0, 16).replace("T", " ") }}</td>
+                    <td class="row-actions">
+                      <button class="btn btn-approve btn-sm" @click="approvePurchase(p.id)">Approve</button>
+                      <button class="btn btn-decline btn-sm" @click="rejectPurchase(p.id)">Reject</button>
+                    </td>
+                  </tr>
+                  <tr v-if="!pendingPurchases.length"><td colspan="8" class="empty-row">No pending purchases.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ============ NOTIFICATIONS ============ -->
+        <section v-if="view === 'notifications'" class="view-section visible">
+          <div class="toolbar">
+            <h2 style="font-size:1.15rem; margin-bottom:0;">Notifications</h2>
+            <button class="btn btn-ghost btn-sm" @click="markAllRead">Mark all read</button>
+          </div>
+
+          <div class="notif-list">
+            <div v-for="n in notifications" :key="n.id" class="notif-item" :class="{ 'is-read': n.is_read }" @click="markRead(n.id)">
+              <div class="notif-icon">
+                <svg viewBox="0 0 20 20"><path d="M10 3.1a4 4 0 0 1 4 4v2.3c0 1 .4 2 1.1 2.7l.4.4H4.5l.4-.4A3.9 3.9 0 0 0 6 9.4V7.1a4 4 0 0 1 4-4Z"/><path d="M8.3 15a1.8 1.8 0 0 0 3.4 0"/></svg>
+              </div>
+              <div class="notif-body">
+                <p class="msg">{{ n.title }}: {{ n.message }}</p>
+                <p class="time">{{ (n.created_at || "").slice(0, 16).replace("T", " ") }}</p>
+              </div>
+              <span class="unread-dot" v-if="!n.is_read"></span>
+            </div>
+            <p v-if="!notifications.length" class="empty-row" style="text-align:center; padding:40px;">No notifications yet.</p>
+          </div>
+        </section>
+
+        <!-- ============ STAFF ============ -->
+        <section v-if="view === 'staff'" class="view-section visible">
+          <div class="card">
+            <h2 style="font-size:1.02rem; margin-bottom:14px;">All users</h2>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Name</th><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <tr v-for="u in users" :key="u.id">
+                    <td class="item-name">{{ u.name }} <span v-if="u.id === user.id" class="muted">(you)</span></td>
+                    <td class="muted">{{ u.username }}</td>
+                    <td><span class="badge" :class="u.role === 'admin' ? 'badge-admin' : 'badge-staff'">{{ u.role }}</span></td>
+                    <td><span class="badge" :class="u.is_active ? 'badge-active' : 'badge-inactive'"><span class="badge-dot"></span>{{ u.is_active ? 'active' : 'disabled' }}</span></td>
+                    <td class="row-actions" v-if="u.id !== user.id">
+                      <button class="btn btn-ghost btn-sm" @click="toggleActive(u)">{{ u.is_active ? 'Disable' : 'Enable' }}</button>
+                      <button class="btn btn-decline btn-sm" @click="removeUser(u)">Remove</button>
+                    </td>
+                    <td v-else class="muted">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-heading"><h2>Add staff</h2><div class="dashline"></div></div>
+          <div class="card">
+            <form class="inline-form" @submit.prevent="addUser">
+              <div class="field grow"><label>Full name</label><input v-model.trim="userForm.name" placeholder="e.g. Priya Sharma" required></div>
+              <div class="field"><label>Username</label><input v-model.trim="userForm.username" placeholder="e.g. priya" required></div>
+              <div class="field"><label>Password</label><input type="password" v-model="userForm.password" placeholder="••••••••" required></div>
+              <div class="field"><label>Role</label>
+                <select v-model="userForm.role">
+                  <option value="staff">Staff</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-brass" style="height:38px;" :disabled="loading">Add user</button>
+            </form>
+            <p class="note">Staff can view everything. Sales and purchases they add need your approval.</p>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+</div>
+{% endraw %}
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>
