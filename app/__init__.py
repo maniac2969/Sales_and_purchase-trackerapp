@@ -1,6 +1,7 @@
 import os
 
-from flask import Flask, jsonify, render_template, current_app
+from flask import Flask, jsonify, render_template, current_app, request
+from werkzeug.exceptions import HTTPException
 
 from .config import Config
 from .extensions import cors, db, jwt
@@ -60,5 +61,17 @@ def create_app(config_class=Config):
     app.register_blueprint(purchases_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(notifications_bp)
+
+    @app.errorhandler(HTTPException)
+    def handle_http_exception(e):
+        if request.path.startswith("/api"):
+            return jsonify(error=e.description), e.code
+        return render_template("index.html"), e.code
+
+    @app.errorhandler(Exception)
+    def handle_generic_exception(e):
+        if request.path.startswith("/api"):
+            return jsonify(error="Internal Server Error"), 500
+        return render_template("index.html"), 500
 
     return app
