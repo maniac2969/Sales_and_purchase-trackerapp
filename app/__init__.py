@@ -40,6 +40,7 @@ def create_app(config_class=Config):
         # _seed_admin()
 
     @app.route("/")
+    @app.route("/api/index")
     def index():
         return render_template("index.html")
 
