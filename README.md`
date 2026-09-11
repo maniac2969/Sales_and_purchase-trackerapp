@@ -66,7 +66,7 @@ Amardeep Readymade is a sophisticated, professional-grade management application
 
 4. **Run the Application**
    ```bash
-   python app.py
+   python main.py
    ```
 
 
