@@ -38,9 +38,9 @@ def create_app(config_class=Config):
         db.create_all()
         _seed_admin()
 
-    init_celery(app)
-
-    from . import tasks  # noqa: F401  (import after init_celery so FlaskTask is set)
+#    init_celery(app)
+#
+#    from . import tasks  # noqa: F401  (import after init_celery so FlaskTask is set)
 
     @app.route("/")
     def index():
