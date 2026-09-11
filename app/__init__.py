@@ -23,9 +23,8 @@ def _seed_admin():
 
 
 def create_app(config_class=Config):
-    app = Flask(__name__, 
-                template_folder=os.path.join(os.path.dirname(__file__), '..', 'templates'),
-                static_folder=os.path.join(os.path.dirname(__file__), '..', 'static'))
+    app = Flask(__name__,
+                template_folder=os.path.join(os.path.dirname(__file__), '..', 'templates'))
     app.config.from_object(config_class)
 
     db.init_app(app)
